@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MiaoPhone16.6</title>
+    <title>妙妙的聊天小窝</title>
     <style>
         * {
             margin: 0;
@@ -2781,6 +2781,10 @@
             <div class="page-content" style="background: #ededed; padding: 12px 0;">
                 <div class="wechat-settings-section">
                     <div class="wechat-settings-item">
+                        <span class="wechat-settings-label">当前对话条数</span>
+                        <span class="wechat-settings-value" id="wechatMsgCount" style="color: #576b95;">0 条</span>
+                    </div>
+                    <div class="wechat-settings-item">
                         <span class="wechat-settings-label">短期记忆条数</span>
                         <input type="number" class="wechat-settings-input" id="wechatMemoryCount" value="20" min="1" max="100">
                     </div>
@@ -3031,11 +3035,29 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
-            // 回车换行，不发送
+            // 输入框按键处理：手机端回车换行，电脑端Enter发送/Ctrl+Enter换行
             textarea.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    // 允许回车换行，不阻止默认行为
-                    // 只有点发送按钮才发送
+                if (e.key === 'Enter') {
+                    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        // 手机端：回车=换行（默认行为），发送靠按钮
+                    } else {
+                        // 电脑端：Enter=发送，Ctrl+Enter=换行
+                        if (e.ctrlKey) {
+                            // Ctrl+Enter：插入换行
+                            const start = this.selectionStart;
+                            const end = this.selectionEnd;
+                            this.value = this.value.substring(0, start) + '\n' + this.value.substring(end);
+                            this.selectionStart = this.selectionEnd = start + 1;
+                            this.style.height = 'auto';
+                            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                            e.preventDefault();
+                        } else {
+                            // Enter：发送消息
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }
                 }
             });
         }
@@ -4430,6 +4452,31 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 80) + 'px';
             });
+            // 输入框按键处理：手机端回车换行，电脑端Enter发送/Ctrl+Enter换行
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        // 手机端：回车=换行（默认行为），发送靠按钮
+                    } else {
+                        // 电脑端：Enter=发送，Ctrl+Enter=换行
+                        if (e.ctrlKey) {
+                            // Ctrl+Enter：插入换行
+                            const start = this.selectionStart;
+                            const end = this.selectionEnd;
+                            this.value = this.value.substring(0, start) + '\n' + this.value.substring(end);
+                            this.selectionStart = this.selectionEnd = start + 1;
+                            this.style.height = 'auto';
+                            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+                            e.preventDefault();
+                        } else {
+                            // Enter：发送消息
+                            e.preventDefault();
+                            wechatSendMessage();
+                        }
+                    }
+                }
+            });
         }
 
         function renderWechatMessages() {
@@ -4914,37 +4961,57 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
         const ttsCache = new Map();
 
         // ==================== 语音活人感增强 ====================
-        // 情绪参数映射（基于txt文件的配置）
+        // 情绪参数映射（绝对值，emotion固定传neutral保持声线一致）
         // 注意：MiniMax的pitch必须是整数！
-        const emotionParams = {
-            happy:     { speed: 0.08,  pitch: 1,   volume: 0.1 },
-            sad:       { speed: -0.1,  pitch: -1,  volume: -0.1 },
-            angry:     { speed: 0.12,  pitch: 1,   volume: 0.15 },
-            fearful:   { speed: 0.1,   pitch: 2,   volume: 0.05 },
-            surprised: { speed: 0.05,  pitch: 1,   volume: 0.15 },
-            tender:    { speed: -0.05, pitch: 0,   volume: -0.05 },
-            playful:   { speed: 0.1,   pitch: 1,   volume: 0.1 },
-            neutral:   { speed: 0,     pitch: 0,   volume: 0 }
+        const EMOTION_PARAMS = {
+            happy:     { speed: 1.1,  pitch: 1,  vol: 6 },
+            sad:       { speed: 0.9,  pitch: -1, vol: 4 },
+            angry:     { speed: 1.12, pitch: 1,  vol: 7 },
+            fearful:   { speed: 1.1,  pitch: 2,  vol: 5 },
+            surprised: { speed: 1.05, pitch: 2,  vol: 7 },
+            neutral:   { speed: 1.0,  pitch: 0,  vol: 5 },
+            tender:    { speed: 0.95, pitch: 0,  vol: 4 },
+            playful:   { speed: 1.1,  pitch: 1,  vol: 6 }
         };
 
-        // 计算情绪参数（70%强度，保持声线一致）
+        // 获取情绪参数（直接返回绝对值）
         function calculateVoiceParams(emotion) {
-            const baseline = { speed: 1.0, pitch: 0, volume: 1.0 };
-            const adj = emotionParams[emotion] || emotionParams.neutral;
-            const strength = 0.7;
+            const params = EMOTION_PARAMS[emotion] || EMOTION_PARAMS.neutral;
             return {
-                speed: parseFloat((baseline.speed + (adj.speed * strength)).toFixed(2)),
-                pitch: Math.round(baseline.pitch + (adj.pitch * strength)),  // 必须是整数！
-                volume: parseFloat((baseline.volume + (adj.volume * strength)).toFixed(2))
+                speed: params.speed,
+                pitch: params.pitch,  // 整数
+                vol: params.vol
             };
         }
 
-        // 添加自然停顿 - 在标点后加空格增强停顿感
+        // 添加自然停顿 - MiniMax专用格式 <#秒数#>
         function addNaturalPauses(text) {
-            return text
-                .replace(/([，。？！……～、])/g, '$1 ')  // 标点后加空格
-                .replace(/\s+/g, ' ')  // 合并多余空格
-                .trim();
+            let result = text;
+
+            // 1. 句首轻微停顿（呼吸感）
+            result = '<#0.05#>' + result;
+
+            // 2. 问号特殊处理：在问号前加微停顿模拟上扬语调
+            result = result.replace(/([^<])？/g, '$1<#0.08#>？<#0.3#>');
+            result = result.replace(/([^<])\?/g, '$1<#0.08#>?<#0.3#>');
+
+            // 3. 其他标点停顿
+            result = result
+                .replace(/，/g, '，<#0.15#>')
+                .replace(/。/g, '。<#0.35#>')
+                .replace(/！/g, '！<#0.3#>')
+                .replace(/、/g, '、<#0.1#>')
+                .replace(/……/g, '……<#0.5#>')
+                .replace(/～/g, '～<#0.2#>');
+
+            // 清理可能的重复停顿标记（保留较长的）
+            result = result.replace(/<#[\d.]+#>\s*<#[\d.]+#>/g, function(match) {
+                const nums = match.match(/[\d.]+/g);
+                const max = Math.max(...nums.map(Number));
+                return `<#${max}#>`;
+            });
+
+            return result;
         }
 
         // 调用MiniMax TTS API（支持情绪参数）
@@ -4993,8 +5060,9 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
                         voice_setting: {
                             voice_id: voiceId,
                             speed: voiceParams.speed,
-                            vol: voiceParams.volume,
-                            pitch: voiceParams.pitch
+                            vol: voiceParams.vol,
+                            pitch: voiceParams.pitch,
+                            emotion: "neutral"
                         },
                         audio_setting: {
                             sample_rate: 32000,
@@ -5085,8 +5153,9 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
                     voice_setting: {
                         voice_id: voiceId,
                         speed: voiceParams.speed,
-                        vol: voiceParams.volume,
-                        pitch: voiceParams.pitch
+                        vol: voiceParams.vol,
+                        pitch: voiceParams.pitch,
+                        emotion: "neutral"
                     },
                     audio_setting: {
                         sample_rate: 32000,
@@ -5272,13 +5341,17 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
         function openWechatChatSettings() {
             const conv = wechatData.conversations[wechatData.currentAssistantId];
             const settings = conv ? conv.settings : {};
-            
+            const messages = conv ? conv.messages || [] : [];
+
+            // 显示当前对话条数
+            document.getElementById('wechatMsgCount').textContent = messages.length + ' 条';
+
             document.getElementById('wechatMemoryCount').value = settings.memoryCount || 20;
             document.getElementById('wechatTimeAware').classList.toggle('on', settings.timeAware || false);
             document.getElementById('wechatVoiceMode').classList.toggle('on', settings.voiceMode || false);
             document.getElementById('wechatTtsEnabled').classList.toggle('on', settings.ttsEnabled || false);
             document.getElementById('wechatVoiceId').value = settings.voiceId || '';
-            
+
             openPage('wechatSettingsPage');
         }
 
