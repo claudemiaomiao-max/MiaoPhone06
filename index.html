@@ -1297,6 +1297,214 @@
             transform: none;
         }
 
+        /* 文件预览区域 */
+        .file-preview-area {
+            display: none;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .file-preview-area.show {
+            display: flex;
+        }
+        .file-preview-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            max-width: 200px;
+        }
+        .file-preview-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .file-preview-item .file-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--border);
+            border-radius: 4px;
+            font-size: 18px;
+        }
+        .file-preview-item .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-preview-item .file-name {
+            font-size: 12px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-preview-item .file-size {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        .file-preview-item .file-remove {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 上传选项弹窗 */
+        .upload-options-modal {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 8px;
+            z-index: 1001;
+            display: none;
+        }
+        .upload-options-modal.show {
+            display: block;
+        }
+        .upload-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .upload-option:hover {
+            background: var(--bg-secondary);
+        }
+        .upload-option svg {
+            width: 20px;
+            height: 20px;
+            color: var(--accent);
+        }
+        .upload-option span {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .upload-options-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+        }
+        .file-remove-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* 消息中的附件显示 */
+        .message-attachments {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .message-attachment-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .message-attachment-item img {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .message-attachment-item img:hover {
+            opacity: 0.9;
+        }
+        .message-attachment-doc {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* 图片预览弹窗 */
+        .image-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-preview-modal.show {
+            display: flex;
+        }
+        .image-preview-modal img {
+            max-width: 95vw;
+            max-height: 95vh;
+            object-fit: contain;
+        }
+        .image-preview-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* 侧边栏 */
         .chat-sidebar {
             position: absolute;
@@ -2146,6 +2354,21 @@
             text-align: right;
         }
 
+        /* 图片消息样式 */
+        .wechat-msg-image {
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            max-width: 200px;
+        }
+        .wechat-msg-image img {
+            display: block;
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
         /* 语音消息样式 */
         .wechat-voice-bubble {
             display: flex;
@@ -2261,10 +2484,13 @@
             min-height: 36px;
             max-height: 100px;
             overflow-y: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .wechat-input-box textarea {
-            width: 100%;
+            flex: 1;
             border: none;
             background: none;
             resize: none;
@@ -2274,6 +2500,23 @@
             font-family: inherit;
             min-height: 20px;
             max-height: 80px;
+        }
+
+        .wechat-upload-btn {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            padding: 0;
+        }
+        .wechat-upload-btn:hover {
+            color: #07c160;
         }
 
         .wechat-input-btns {
@@ -2493,6 +2736,25 @@
                     </div>
                 </div>
                 <div class="settings-section">
+                    <div class="settings-section-title">默认模型</div>
+                    <div class="settings-card">
+                        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                            <div class="settings-item-left" style="width: 100%;">
+                                <div class="settings-item-icon" style="background: #fff3e0; color: #ff9800;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v10M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h10M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
+                                </div>
+                                <div>
+                                    <div class="settings-item-text">全局默认模型</div>
+                                    <div class="settings-item-desc">所有助手默认使用此模型</div>
+                                </div>
+                            </div>
+                            <select class="form-select" id="globalDefaultModel" onchange="saveGlobalDefaultModel()" style="width: 100%; margin-top: 8px;">
+                                <option value="">请选择默认模型</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
                     <div class="settings-section-title">数据管理</div>
                     <div class="settings-card">
                         <div class="settings-item" onclick="exportData()">
@@ -2640,6 +2902,8 @@
 
             <!-- 输入区域 -->
             <div class="chat-input-area">
+                <!-- 文件预览区域 -->
+                <div class="file-preview-area" id="filePreviewArea"></div>
                 <div class="chat-input-toolbar">
                     <button class="toolbar-btn" id="modelSelectBtn" onclick="showModelSelector()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v10M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h10M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
@@ -2653,7 +2917,7 @@
                 <div class="chat-input-wrapper">
                     <div class="chat-input-box">
                         <textarea id="chatInput" placeholder="输入消息..." rows="1"></textarea>
-                        <button class="chat-upload-btn" onclick="uploadFile()">
+                        <button class="chat-upload-btn" onclick="showUploadOptions('api')" title="添加文件">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
                     </div>
@@ -2751,8 +3015,12 @@
                 <!-- 动态渲染消息 -->
             </div>
             <div class="wechat-input-area">
+                <div class="file-preview-area" id="wechatFilePreviewArea"></div>
                 <div class="wechat-input-row">
                     <div class="wechat-input-box">
+                        <button class="wechat-upload-btn" onclick="showUploadOptions('wechat')" title="添加文件">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                        </button>
                         <textarea id="wechatInput" placeholder="输入消息..." rows="1"></textarea>
                     </div>
                     <div class="wechat-input-btns">
@@ -2826,6 +3094,32 @@
 
         <!-- 遮罩层 -->
         <div class="overlay" id="overlay" onclick="closeOverlay()"></div>
+
+        <!-- 上传选项弹窗 -->
+        <div class="upload-options-overlay" id="uploadOptionsOverlay" onclick="hideUploadOptions()" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000;display:none;"></div>
+        <div class="upload-options-modal" id="uploadOptionsModal">
+            <div class="upload-option" onclick="selectFile()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                <span>选择文件</span>
+            </div>
+            <div class="upload-option" onclick="selectImage()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>选择图片</span>
+            </div>
+            <div class="upload-option" onclick="capturePhoto()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span>拍照</span>
+            </div>
+        </div>
+        <input type="file" id="fileInput" style="display:none" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.md,.py,.js,.html,.css,.json" onchange="handleFileSelect(event)">
+        <input type="file" id="imageInput" style="display:none" multiple accept="image/*" onchange="handleFileSelect(event)">
+        <input type="file" id="cameraInput" style="display:none" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+
+        <!-- 图片预览弹窗 -->
+        <div class="image-preview-modal" id="imagePreviewModal" onclick="hideImagePreview()">
+            <img id="imagePreviewImg" src="" alt="预览">
+            <button class="image-preview-close" onclick="hideImagePreview()">×</button>
+        </div>
 
         <!-- 添加供应商弹窗 -->
         <div class="modal" id="addProviderModal">
@@ -3087,7 +3381,39 @@
         }
 
         function openSettings() {
+            populateGlobalModelDropdown();
             openPage('settingsPage');
+        }
+
+        // 填充全局默认模型下拉框
+        function populateGlobalModelDropdown() {
+            const select = document.getElementById('globalDefaultModel');
+            if (!select) return;
+
+            // 获取启用的供应商和模型
+            const enabledProviders = appData.providers.filter(p => p.models && p.models.length > 0);
+
+            let html = '<option value="">请选择默认模型</option>';
+            enabledProviders.forEach(p => {
+                html += `<optgroup label="${p.name}">`;
+                p.models.forEach(m => {
+                    html += `<option value="${p.id}||${m.id}">${m.name || m.id}</option>`;
+                });
+                html += '</optgroup>';
+            });
+            select.innerHTML = html;
+
+            // 设置当前值
+            if (appData.settings.defaultModel) {
+                select.value = appData.settings.defaultModel;
+            }
+        }
+
+        // 保存全局默认模型
+        function saveGlobalDefaultModel() {
+            const select = document.getElementById('globalDefaultModel');
+            appData.settings.defaultModel = select.value;
+            saveData();
         }
 
         function openMiaomiaoAPI() {
@@ -3407,17 +3733,6 @@
                             <label class="form-label">助手名称</label>
                             <input type="text" class="form-input" id="editAssistantName" value="${data.name || ''}" placeholder="给助手起个名字">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">选择模型</label>
-                            <select class="form-select" id="editAssistantModel">
-                                <option value="">请选择模型</option>
-                                ${appData.providers.filter(p => p.models && p.models.length > 0).map(p => `
-                                    <optgroup label="${p.name}">
-                                        ${p.models.map(m => `<option value="${p.id}||${m.id}" ${data.providerId === p.id && data.modelId === m.id ? 'selected' : ''}>${m.name || m.id}</option>`).join('')}
-                                    </optgroup>
-                                `).join('')}
-                            </select>
-                        </div>
                     </div>
 
                     <div class="form-section">
@@ -3522,7 +3837,6 @@
 
         function saveAssistant() {
             const name = document.getElementById('editAssistantName').value.trim();
-            const modelValue = document.getElementById('editAssistantModel').value;
             const prompt = document.getElementById('editAssistantPrompt').value;
             const temp = parseFloat(document.getElementById('editAssistantTemp').value);
             const topP = parseFloat(document.getElementById('editAssistantTopP').value);
@@ -3537,18 +3851,14 @@
                 return;
             }
 
-            if (!modelValue) {
-                alert('请选择模型');
-                return;
-            }
-
-            const [providerId, modelId] = modelValue.split('||');
+            // 保留已有的模型设置（如果有），否则留空（使用全局默认）
+            const existingAssistant = editingAssistantId ? appData.assistants.find(a => a.id === editingAssistantId) : null;
 
             const assistantData = {
                 id: editingAssistantId || 'assistant_' + Date.now(),
                 name,
-                providerId,
-                modelId,
+                providerId: existingAssistant?.providerId || '',
+                modelId: existingAssistant?.modelId || '',
                 systemPrompt: prompt,
                 temperature: temp,
                 topP,
@@ -3624,8 +3934,16 @@
 
             if (assistant) {
                 nameEl.textContent = assistant.name;
-                const provider = appData.providers.find(p => p.id === assistant.providerId);
-                modelEl.textContent = assistant.modelId + (provider ? ` · ${provider.name}` : '');
+                // 显示全局默认模型
+                const globalModel = appData.settings.defaultModel;
+                if (globalModel) {
+                    const [providerId, modelId] = globalModel.split('||');
+                    const provider = appData.providers.find(p => p.id === providerId);
+                    const model = provider?.models?.find(m => m.id === modelId);
+                    modelEl.textContent = (model?.name || modelId) + (provider ? ` · ${provider.name}` : '');
+                } else {
+                    modelEl.textContent = '请设置默认模型';
+                }
                 if (assistant.avatar) {
                     avatarEl.innerHTML = `<img src="${assistant.avatar}" alt="">`;
                 }
@@ -3647,11 +3965,17 @@
         function updateChatHeader() {
             const conv = appData.conversations.find(c => c.id === appData.currentConversationId);
             document.getElementById('chatTitle').textContent = conv ? conv.title : '新对话';
-            
-            // 更新模型选择显示
-            const assistant = appData.assistants.find(a => a.id === appData.currentAssistantId);
-            if (assistant) {
-                document.getElementById('currentModelDisplay').textContent = assistant.modelId.length > 20 ? assistant.modelId.substring(0, 20) + '...' : assistant.modelId;
+
+            // 更新模型选择显示：对话临时模型 > 全局默认模型
+            const globalModel = appData.settings.defaultModel;
+            const currentModel = conv?.tempModel || globalModel || '';
+
+            if (currentModel) {
+                const [providerId, modelId] = currentModel.split('||');
+                const provider = appData.providers.find(p => p.id === providerId);
+                const model = provider?.models?.find(m => m.id === modelId);
+                const displayName = model?.name || modelId || '未知模型';
+                document.getElementById('currentModelDisplay').textContent = displayName.length > 20 ? displayName.substring(0, 20) + '...' : displayName;
             } else {
                 document.getElementById('currentModelDisplay').textContent = '选择模型';
             }
@@ -3787,7 +4111,22 @@
                         <button class="message-version-btn" onclick="switchMessageVersion('${msg.id}', 1)">›</button>
                     </div>
                 ` : '';
-                
+
+                // 渲染附件
+                let attachmentsHtml = '';
+                if (msg.attachments && msg.attachments.length > 0) {
+                    attachmentsHtml = `<div class="message-attachments">` +
+                        msg.attachments.map((att, idx) => {
+                            if (att.isImage && att.preview) {
+                                // 使用data属性存储消息ID和附件索引，避免在onclick中放base64
+                                return `<div class="message-attachment-item"><img src="${att.preview}" alt="${att.name}" data-msg-id="${msg.id}" data-att-idx="${idx}" onclick="showAttachmentPreview(this)"></div>`;
+                            } else {
+                                return `<div class="message-attachment-item message-attachment-doc"><span class="file-icon">📄</span><span>${att.name}</span></div>`;
+                            }
+                        }).join('') +
+                    `</div>`;
+                }
+
                 return `
                     <div class="message user">
                         <div class="message-avatar">
@@ -3798,6 +4137,7 @@
                                 <span class="message-time">${formatTime(msg.timestamp)}</span>
                                 <span class="message-name">妙妙</span>
                             </div>
+                            ${attachmentsHtml}
                             <div class="message-bubble">${formatMessageContent(currentContent)}</div>
                             <div class="message-actions">
                                 <button class="message-action-btn" onclick="copyMessage('${msg.id}')" title="复制">
@@ -4036,7 +4376,8 @@
             const input = document.getElementById('chatInput');
             const content = input.value.trim();
 
-            if (!content) return;
+            // 需要有文本或文件才能发送
+            if (!content && pendingFiles.length === 0) return;
             if (!appData.currentAssistantId) {
                 alert('请先选择一个助手');
                 return;
@@ -4047,18 +4388,53 @@
             }
 
             const assistant = appData.assistants.find(a => a.id === appData.currentAssistantId);
-            const provider = appData.providers.find(p => p.id === assistant.providerId);
+
+            // 获取当前使用的模型：对话临时模型 > 全局默认模型 > 助手模型
+            const conv = appData.conversations.find(c => c.id === appData.currentConversationId);
+            const tempModel = conv?.tempModel; // 对话内临时切换的模型
+            const globalModel = appData.settings.defaultModel;
+            const modelValue = tempModel || globalModel || (assistant.providerId && assistant.modelId ? `${assistant.providerId}||${assistant.modelId}` : '');
+
+            if (!modelValue) {
+                alert('请先在设置中选择默认模型');
+                return;
+            }
+
+            const [providerId, modelId] = modelValue.split('||');
+            const provider = appData.providers.find(p => p.id === providerId);
 
             if (!provider) {
                 alert('找不到对应的供应商配置');
                 return;
             }
 
+            // 临时覆盖assistant的模型（用于本次请求）
+            const effectiveAssistant = { ...assistant, providerId, modelId };
+
+            // 处理文件附件
+            const filesToSend = [...pendingFiles];
+            const hasFiles = filesToSend.length > 0;
+
+            // 构建消息内容（用于API请求）
+            const apiContent = hasFiles ? buildMultimodalContent(content, filesToSend) : content;
+
+            // 构建用于显示的内容
+            const displayContent = content;
+
+            // 保存文件预览信息（仅保存图片的base64用于显示）
+            const attachments = filesToSend.map(f => ({
+                name: f.name,
+                isImage: f.isImage,
+                preview: f.isImage ? f.base64 : null
+            }));
+
             const userMsg = {
                 id: 'msg_' + Date.now(),
                 role: 'user',
-                content: content,
-                versions: [content],
+                content: displayContent,
+                apiContent: apiContent, // 用于API请求的内容（可能是multimodal格式）
+                attachments: attachments, // 附件信息
+                versions: [displayContent],
                 currentVersion: 0,
                 timestamp: new Date().toISOString()
             };
@@ -4066,6 +4442,7 @@
             appData.messages[appData.currentConversationId].push(userMsg);
             input.value = '';
             input.style.height = 'auto';
+            clearPendingFiles(); // 清空待发送文件
             renderMessages();
 
             if (appData.messages[appData.currentConversationId].length === 1) {
@@ -4091,7 +4468,7 @@
             renderMessages();
 
             try {
-                await streamChat(provider, assistant, aiMsg);
+                await streamChat(provider, effectiveAssistant, aiMsg);
                 aiMsg.versions[0] = aiMsg.content;
             } catch (error) {
                 console.error('请求失败:', error);
@@ -4104,7 +4481,7 @@
             saveData();
             renderMessages();
 
-            const conv = appData.conversations.find(c => c.id === appData.currentConversationId);
+            // conv 已在函数开头声明，直接使用
             if (conv) {
                 conv.updatedAt = new Date().toISOString();
                 saveData();
@@ -4156,7 +4533,9 @@
             const history = appData.messages[appData.currentConversationId].slice(0, -1);
             const contextLength = assistant.contextLength || 20;
             for (const m of history.slice(-contextLength)) {
-                messages.push({ role: m.role, content: m.content });
+                // 优先使用apiContent（multimodal格式），否则使用content
+                const msgContent = m.apiContent || m.content;
+                messages.push({ role: m.role, content: msgContent });
             }
 
             return messages;
@@ -4251,8 +4630,11 @@
                 return;
             }
 
-            const assistant = appData.assistants.find(a => a.id === appData.currentAssistantId);
-            const currentModelId = assistant?.modelId;
+            // 获取当前使用的模型：对话临时模型 > 全局默认模型
+            const conv = appData.conversations.find(c => c.id === appData.currentConversationId);
+            const globalModel = appData.settings.defaultModel;
+            const currentModel = conv?.tempModel || globalModel || '';
+            const [, currentModelId] = currentModel ? currentModel.split('||') : ['', ''];
 
             // 只显示模型名，换行显示长名称
             document.getElementById('modelSelectContent').innerHTML = allModels.map(m => `
@@ -4267,19 +4649,265 @@
             showModal('modelSelectModal');
         }
 
+        // 对话内临时切换模型（仅对当前对话生效）
         function quickSelectModel(providerId, modelId) {
-            const assistant = appData.assistants.find(a => a.id === appData.currentAssistantId);
-            if (assistant) {
-                assistant.providerId = providerId;
-                assistant.modelId = modelId;
+            const conv = appData.conversations.find(c => c.id === appData.currentConversationId);
+            if (conv) {
+                conv.tempModel = `${providerId}||${modelId}`;
                 saveData();
                 updateChatHeader();
             }
             hideModal('modelSelectModal');
         }
 
-        function uploadFile() {
-            alert('文件上传功能开发中');
+        // ==================== 文件上传功能 ====================
+        let pendingFiles = []; // 存储待发送的文件
+        let currentUploadMode = 'api'; // 当前上传模式：api 或 wechat
+
+        function showUploadOptions(mode) {
+            currentUploadMode = mode;
+            document.getElementById('uploadOptionsOverlay').style.display = 'block';
+            document.getElementById('uploadOptionsModal').style.display = 'block';
+        }
+
+        function hideUploadOptions() {
+            document.getElementById('uploadOptionsOverlay').style.display = 'none';
+            document.getElementById('uploadOptionsModal').style.display = 'none';
+        }
+
+        function selectFile() {
+            hideUploadOptions();
+            document.getElementById('fileInput').click();
+        }
+
+        function selectImage() {
+            hideUploadOptions();
+            document.getElementById('imageInput').click();
+        }
+
+        function capturePhoto() {
+            hideUploadOptions();
+            document.getElementById('cameraInput').click();
+        }
+
+        async function handleFileSelect(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            for (const file of files) {
+                try {
+                    const fileData = await processFile(file);
+                    pendingFiles.push(fileData);
+                } catch (err) {
+                    console.error('文件处理失败:', err);
+                    alert('文件处理失败: ' + file.name);
+                }
+            }
+
+            renderFilePreview();
+            event.target.value = ''; // 清空input以便重复选择
+        }
+
+        async function processFile(file) {
+            const isImage = file.type.startsWith('image/');
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            // 判断是否是文本文件
+            const textExtensions = ['txt', 'md', 'py', 'js', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'ts', 'jsx', 'tsx', 'vue', 'java', 'c', 'cpp', 'h', 'go', 'rs', 'rb', 'php', 'sh', 'bat', 'sql', 'csv'];
+            const isTextFile = textExtensions.includes(ext) || file.type.startsWith('text/');
+
+            // 获取media_type
+            let mediaType = file.type;
+            if (!mediaType && isImage) {
+                const typeMap = {
+                    'jpg': 'image/jpeg',
+                    'jpeg': 'image/jpeg',
+                    'png': 'image/png',
+                    'gif': 'image/gif',
+                    'webp': 'image/webp'
+                };
+                mediaType = typeMap[ext] || 'image/jpeg';
+            }
+
+            // 读取base64（用于图片显示和API）
+            const base64Promise = new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // 读取文本内容（用于文本文件）
+            const textPromise = isTextFile ? new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            }) : Promise.resolve(null);
+
+            const [base64Data, textContent] = await Promise.all([base64Promise, textPromise]);
+
+            return {
+                name: file.name,
+                type: file.type,
+                mediaType: mediaType,
+                size: file.size,
+                isImage: isImage,
+                isTextFile: isTextFile,
+                base64: base64Data, // data:xxx;base64,xxx 格式
+                base64Data: base64Data.split(',')[1], // 纯base64数据
+                textContent: textContent // 文本文件的内容
+            };
+        }
+
+        function renderFilePreview() {
+            // 根据当前模式选择正确的预览区域
+            const previewAreaId = currentUploadMode === 'wechat' ? 'wechatFilePreviewArea' : 'filePreviewArea';
+            const previewArea = document.getElementById(previewAreaId);
+
+            // 同时更新两个预览区域（防止切换模式时数据残留）
+            const apiPreview = document.getElementById('filePreviewArea');
+            const wechatPreview = document.getElementById('wechatFilePreviewArea');
+
+            if (pendingFiles.length === 0) {
+                if (apiPreview) { apiPreview.style.display = 'none'; apiPreview.innerHTML = ''; }
+                if (wechatPreview) { wechatPreview.style.display = 'none'; wechatPreview.innerHTML = ''; }
+                return;
+            }
+
+            const previewHtml = pendingFiles.map((file, index) => {
+                if (file.isImage) {
+                    return `
+                        <div class="file-preview-item">
+                            <img src="${file.base64}" alt="${file.name}">
+                            <button class="file-remove-btn" onclick="removeFile(${index})">×</button>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="file-preview-item file-preview-doc">
+                            <div class="file-icon">📄</div>
+                            <div class="file-name">${file.name}</div>
+                            <button class="file-remove-btn" onclick="removeFile(${index})">×</button>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            // 只显示当前模式对应的预览区域
+            if (currentUploadMode === 'wechat') {
+                if (wechatPreview) { wechatPreview.style.display = 'flex'; wechatPreview.innerHTML = previewHtml; }
+                if (apiPreview) { apiPreview.style.display = 'none'; apiPreview.innerHTML = ''; }
+            } else {
+                if (apiPreview) { apiPreview.style.display = 'flex'; apiPreview.innerHTML = previewHtml; }
+                if (wechatPreview) { wechatPreview.style.display = 'none'; wechatPreview.innerHTML = ''; }
+            }
+        }
+
+        function removeFile(index) {
+            pendingFiles.splice(index, 1);
+            renderFilePreview();
+        }
+
+        function clearPendingFiles() {
+            pendingFiles = [];
+            renderFilePreview();
+        }
+
+        // 构建包含文件的消息内容（Claude API multimodal格式）
+        function buildMultimodalContent(text, files) {
+            if (!files || files.length === 0) {
+                return text;
+            }
+
+            const content = [];
+
+            // 先添加图片（使用OpenAI兼容格式）
+            for (const file of files) {
+                if (file.isImage) {
+                    content.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: file.base64  // data:image/xxx;base64,xxx 完整格式
+                        }
+                    });
+                }
+            }
+
+            // 构建文本内容（包含文本文件的实际内容）
+            let textParts = [];
+
+            // 添加文本文件的内容
+            const textFiles = files.filter(f => f.isTextFile && f.textContent);
+            if (textFiles.length > 0) {
+                for (const file of textFiles) {
+                    textParts.push(`=== 文件: ${file.name} ===\n${file.textContent}\n=== 文件结束 ===`);
+                }
+            }
+
+            // 添加非文本非图片文件的说明（如PDF等）
+            const otherFiles = files.filter(f => !f.isImage && !f.isTextFile);
+            if (otherFiles.length > 0) {
+                const fileList = otherFiles.map(f => `[文件: ${f.name} - 无法读取内容]`).join('\n');
+                textParts.push(fileList);
+            }
+
+            // 添加用户输入的文本
+            if (text) {
+                textParts.push(text);
+            }
+
+            // 如果只有图片没有文本，添加默认提示
+            const finalText = textParts.length > 0 ? textParts.join('\n\n') : '请查看图片';
+
+            content.push({
+                type: 'text',
+                text: finalText
+            });
+
+            return content;
+        }
+
+        // 图片预览功能
+        function showImagePreview(src) {
+            const modal = document.getElementById('imagePreviewModal');
+            const img = document.getElementById('imagePreviewImg');
+            img.src = src;
+            modal.classList.add('show');
+        }
+
+        function hideImagePreview() {
+            const modal = document.getElementById('imagePreviewModal');
+            modal.classList.remove('show');
+        }
+
+        // 从消息附件中显示图片预览
+        function showAttachmentPreview(imgElement) {
+            const msgId = imgElement.dataset.msgId;
+            const attIdx = parseInt(imgElement.dataset.attIdx);
+
+            // 从API模式消息中查找
+            const messages = appData.messages[appData.currentConversationId] || [];
+            const msg = messages.find(m => m.id === msgId);
+            if (msg && msg.attachments && msg.attachments[attIdx]) {
+                showImagePreview(msg.attachments[attIdx].preview);
+            }
+        }
+
+        // 从微信消息中显示图片预览
+        function showWechatImagePreview(msgId) {
+            const conv = wechatData.conversations[wechatData.currentAssistantId];
+            if (!conv) return;
+
+            // 在正式消息和暂存消息中查找
+            let msg = conv.messages.find(m => m.id === msgId);
+            if (!msg) {
+                msg = wechatData.pendingMessages.find(m => m.id === msgId);
+            }
+
+            if (msg && msg.type === 'image' && msg.content) {
+                showImagePreview(msg.content);
+            }
         }
 
         // ==================== 数据导入导出 ====================
@@ -4445,9 +5073,15 @@
             renderWechatList();
         }
 
+        let wechatInputInitialized = false; // 防止重复绑定事件监听器
         function setupWechatInput() {
             const textarea = document.getElementById('wechatInput');
             textarea.value = '';
+
+            // 防止重复绑定事件监听器
+            if (wechatInputInitialized) return;
+            wechatInputInitialized = true;
+
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 80) + 'px';
@@ -4561,10 +5195,31 @@
                 `;
             }
 
+            // 图片消息
+            if (msg.type === 'image') {
+                return `
+                    <div class="wechat-msg ${isUser ? 'user' : 'assistant'}" ${bubbleClass} data-msg-id="${msg.id}">
+                        <div class="wechat-msg-avatar">
+                            ${isUser
+                                ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+                                : (assistant?.avatar ? `<img src="${assistant.avatar}" alt="">` : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>')
+                            }
+                        </div>
+                        <div class="wechat-msg-body">
+                            <div class="wechat-msg-image" onclick="showWechatImagePreview('${msg.id}')">
+                                <img src="${msg.content}" alt="${msg.fileName || '图片'}">
+                            </div>
+                            <div class="wechat-msg-time">${formatTime(msg.timestamp)}</div>
+                            ${actionBtns}
+                        </div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="wechat-msg ${isUser ? 'user' : 'assistant'}" ${bubbleClass} data-msg-id="${msg.id}">
                     <div class="wechat-msg-avatar">
-                        ${isUser 
+                        ${isUser
                             ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
                             : (assistant?.avatar ? `<img src="${assistant.avatar}" alt="">` : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>')
                         }
@@ -4615,8 +5270,28 @@
         async function wechatSendMessage() {
             const input = document.getElementById('wechatInput');
             const content = input.value.trim();
-            
-            // 如果输入框有内容，先添加到暂存
+            const filesToSend = [...pendingFiles];
+            const hasFiles = filesToSend.length > 0;
+
+            // 如果有图片，先添加图片消息到暂存
+            if (hasFiles) {
+                for (const file of filesToSend) {
+                    if (file.isImage) {
+                        const imgMsg = {
+                            id: 'wmsg_' + Date.now() + '_img',
+                            role: 'user',
+                            type: 'image',
+                            content: file.base64,
+                            fileName: file.name,
+                            timestamp: new Date().toISOString()
+                        };
+                        wechatData.pendingMessages.push(imgMsg);
+                    }
+                }
+                clearPendingFiles();
+            }
+
+            // 如果输入框有内容，添加文本消息到暂存
             if (content) {
                 const msg = {
                     id: 'wmsg_' + Date.now(),
@@ -4639,12 +5314,23 @@
             if (!hasPending && !needsReply) return;
 
             const assistant = appData.assistants.find(a => a.id === wechatData.currentAssistantId);
-            const provider = appData.providers.find(p => p.id === assistant?.providerId);
+
+            // 使用全局默认模型
+            const globalModel = appData.settings.defaultModel;
+            if (!globalModel) {
+                alert('请先在设置中选择默认模型');
+                return;
+            }
+            const [providerId, modelId] = globalModel.split('||');
+            const provider = appData.providers.find(p => p.id === providerId);
 
             if (!provider) {
                 alert('找不到对应的供应商配置');
                 return;
             }
+
+            // 创建带有正确模型的临时助手对象
+            const effectiveAssistant = { ...assistant, providerId, modelId };
 
             // 有暂存消息才执行"把暂存移到正式消息"
             if (hasPending) {
@@ -4664,8 +5350,8 @@
 
             try {
                 // 构建请求
-                const requestMessages = buildWechatRequestMessages(conv, assistant);
-                
+                const requestMessages = buildWechatRequestMessages(conv, effectiveAssistant);
+
                 const response = await fetch(provider.baseUrl + provider.apiPath, {
                     method: 'POST',
                     headers: {
@@ -4673,9 +5359,9 @@
                         'Authorization': 'Bearer ' + provider.apiKey
                     },
                     body: JSON.stringify({
-                        model: assistant.modelId,
+                        model: effectiveAssistant.modelId,
                         messages: requestMessages,
-                        temperature: assistant.temperature || 0.8
+                        temperature: effectiveAssistant.temperature || 0.8
                     })
                 });
 
@@ -4815,10 +5501,23 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
             const memoryCount = settings.memoryCount || 20;
             const history = conv.messages.slice(-memoryCount);
             const assistantName = assistant.name || '助手';
-            
-            history.forEach(msg => {
+
+            // 收集图片用于multimodal
+            const images = [];
+
+            history.forEach((msg, idx) => {
                 const speaker = msg.role === 'user' ? '用户' : assistantName;
                 let content = msg.content;
+
+                // 图片消息：收集图片，在文本中标记
+                if (msg.type === 'image') {
+                    images.push({
+                        dataUrl: content  // 保存完整的 data:image/xxx;base64,xxx 格式
+                    });
+                    fullContent += `${speaker}: [发送了图片${images.length}]\n`;
+                    return;
+                }
+
                 // 非字符串内容stringify
                 if (typeof content !== 'string') {
                     content = JSON.stringify(content);
@@ -4831,6 +5530,29 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
 
             fullContent += '=====\n';
             fullContent += `请以${assistantName}的身份回复:`;
+
+            // 如果有图片，构建multimodal格式（OpenAI兼容格式）
+            if (images.length > 0) {
+                const contentParts = [];
+
+                // 先添加所有图片（OpenAI兼容格式）
+                images.forEach(img => {
+                    contentParts.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: img.dataUrl
+                        }
+                    });
+                });
+
+                // 再添加文本
+                contentParts.push({
+                    type: 'text',
+                    text: fullContent
+                });
+
+                return [{ role: 'user', content: contentParts }];
+            }
 
             // A风格：只发一条user消息
             return [{ role: 'user', content: fullContent }];
