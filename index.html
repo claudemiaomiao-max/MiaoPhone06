@@ -4529,13 +4529,76 @@
                 messages.push({ role: 'system', content: systemContent });
             }
 
+            // 验证图片数据是否有效
+            function isValidImageDataUrl(dataUrl) {
+                if (!dataUrl || typeof dataUrl !== 'string') return false;
+                return dataUrl.startsWith('data:image/') && dataUrl.includes('base64,') && dataUrl.length > 100;
+            }
+
+            // 清理和验证multimodal内容
+            function sanitizeContent(content) {
+                // 如果是字符串，直接返回（可能是空字符串也接受）
+                if (typeof content === 'string') {
+                    return content || '[空消息]';
+                }
+                // 如果是数组（multimodal格式），验证并过滤
+                if (Array.isArray(content)) {
+                    const validParts = [];
+                    let hasText = false;
+                    for (const part of content) {
+                        try {
+                            if (part.type === 'text') {
+                                validParts.push(part);
+                                hasText = true;
+                            } else if (part.type === 'image_url' && part.image_url?.url) {
+                                // 验证图片数据
+                                if (isValidImageDataUrl(part.image_url.url)) {
+                                    validParts.push(part);
+                                } else {
+                                    console.warn('API模式：跳过异常图片数据');
+                                }
+                            }
+                            // 跳过其他未知类型
+                        } catch (e) {
+                            console.warn('API模式：跳过异常内容块', e);
+                        }
+                    }
+                    // 如果过滤后没有内容，返回占位文本
+                    if (validParts.length === 0) {
+                        return '[消息内容已损坏]';
+                    }
+                    // 如果只剩文本，直接返回文本字符串
+                    if (validParts.length === 1 && validParts[0].type === 'text') {
+                        return validParts[0].text || '[空消息]';
+                    }
+                    // 确保有文本部分
+                    if (!hasText) {
+                        validParts.push({ type: 'text', text: '请查看图片' });
+                    }
+                    return validParts;
+                }
+                // 其他类型尝试转字符串
+                try {
+                    return JSON.stringify(content) || '[未知格式消息]';
+                } catch (e) {
+                    return '[无法解析的消息]';
+                }
+            }
+
             // 历史消息
             const history = appData.messages[appData.currentConversationId].slice(0, -1);
             const contextLength = assistant.contextLength || 20;
             for (const m of history.slice(-contextLength)) {
-                // 优先使用apiContent（multimodal格式），否则使用content
-                const msgContent = m.apiContent || m.content;
-                messages.push({ role: m.role, content: msgContent });
+                try {
+                    // 优先使用apiContent（multimodal格式），否则使用content
+                    const rawContent = m.apiContent || m.content;
+                    const msgContent = sanitizeContent(rawContent);
+                    messages.push({ role: m.role, content: msgContent });
+                } catch (e) {
+                    // 单条消息处理出错，添加占位消息
+                    console.warn('API模式：跳过异常消息', m?.id, e);
+                    messages.push({ role: m.role || 'user', content: '[消息解析失败]' });
+                }
             }
 
             return messages;
@@ -5505,27 +5568,56 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
             // 收集图片用于multimodal
             const images = [];
 
+            // 验证图片数据是否有效
+            function isValidImageDataUrl(dataUrl) {
+                if (!dataUrl || typeof dataUrl !== 'string') return false;
+                // 检查是否是有效的 data URL 格式
+                return dataUrl.startsWith('data:image/') && dataUrl.includes('base64,') && dataUrl.length > 100;
+            }
+
             history.forEach((msg, idx) => {
-                const speaker = msg.role === 'user' ? '用户' : assistantName;
-                let content = msg.content;
+                try {
+                    const speaker = msg.role === 'user' ? '用户' : assistantName;
+                    let content = msg.content;
 
-                // 图片消息：收集图片，在文本中标记
-                if (msg.type === 'image') {
-                    images.push({
-                        dataUrl: content  // 保存完整的 data:image/xxx;base64,xxx 格式
-                    });
-                    fullContent += `${speaker}: [发送了图片${images.length}]\n`;
-                    return;
-                }
+                    // 跳过空消息
+                    if (content === null || content === undefined) {
+                        fullContent += `${speaker}: [消息内容为空]\n`;
+                        return;
+                    }
 
-                // 非字符串内容stringify
-                if (typeof content !== 'string') {
-                    content = JSON.stringify(content);
+                    // 图片消息：收集图片，在文本中标记
+                    if (msg.type === 'image') {
+                        if (isValidImageDataUrl(content)) {
+                            images.push({
+                                dataUrl: content  // 保存完整的 data:image/xxx;base64,xxx 格式
+                            });
+                            fullContent += `${speaker}: [发送了图片${images.length}]\n`;
+                        } else {
+                            // 图片数据异常，只添加文字标记
+                            fullContent += `${speaker}: [发送了图片，但图片数据已损坏]\n`;
+                            console.warn('微信模式：跳过异常图片数据', msg.id);
+                        }
+                        return;
+                    }
+
+                    // 非字符串内容stringify
+                    if (typeof content !== 'string') {
+                        try {
+                            content = JSON.stringify(content);
+                        } catch (e) {
+                            content = '[无法解析的内容]';
+                        }
+                    }
+                    if (msg.type === 'voice_message') {
+                        content = `[语音消息] ${content}`;
+                    }
+                    fullContent += `${speaker}: ${content}\n`;
+                } catch (e) {
+                    // 单条消息处理出错，跳过这条消息
+                    console.warn('微信模式：跳过异常消息', msg?.id, e);
+                    fullContent += `${msg?.role === 'user' ? '用户' : assistantName}: [消息解析失败]\n`;
                 }
-                if (msg.type === 'voice_message') {
-                    content = `[语音消息] ${content}`;
-                }
-                fullContent += `${speaker}: ${content}\n`;
             });
 
             fullContent += '=====\n';
@@ -5537,13 +5629,21 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
 
                 // 先添加所有图片（OpenAI兼容格式）
                 images.forEach(img => {
-                    contentParts.push({
-                        type: 'image_url',
-                        image_url: {
-                            url: img.dataUrl
-                        }
-                    });
+                    // 再次验证，防止异常数据进入请求
+                    if (img.dataUrl && typeof img.dataUrl === 'string') {
+                        contentParts.push({
+                            type: 'image_url',
+                            image_url: {
+                                url: img.dataUrl
+                            }
+                        });
+                    }
                 });
+
+                // 如果过滤后没有有效图片，退回纯文本模式
+                if (contentParts.length === 0) {
+                    return [{ role: 'user', content: fullContent }];
+                }
 
                 // 再添加文本
                 contentParts.push({
