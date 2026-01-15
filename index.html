@@ -3315,8 +3315,18 @@
         };
 
         // ==================== 初始化 ====================
-        function init() {
-            loadData();
+        async function init() {
+            // 初始化 IndexedDB
+            await initIndexedDB();
+
+            // 迁移旧数据（从 localStorage 到 IndexedDB）
+            if (dbInstance) {
+                await migrateFromLocalStorage();
+            }
+
+            // 加载数据
+            await loadData();
+
             updateSettingsCounts();
             setupTextareaAutoResize();
             updateThinkingDisplay();
@@ -3356,23 +3366,169 @@
             });
         }
 
-        // ==================== 本地存储 ====================
+        // ==================== IndexedDB 存储 ====================
+        const DB_NAME = 'MiaomiaoChat';
+        const DB_VERSION = 1;
+        let dbInstance = null;
+
+        // 初始化 IndexedDB
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    console.warn('浏览器不支持IndexedDB，将使用localStorage');
+                    resolve(null);
+                    return;
+                }
+
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => {
+                    console.error('IndexedDB打开失败:', request.error);
+                    resolve(null);
+                };
+
+                request.onsuccess = () => {
+                    dbInstance = request.result;
+                    console.log('IndexedDB初始化成功');
+                    resolve(dbInstance);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    // 创建数据存储
+                    if (!db.objectStoreNames.contains('appData')) {
+                        db.createObjectStore('appData', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('wechatData')) {
+                        db.createObjectStore('wechatData', { keyPath: 'id' });
+                    }
+                    console.log('IndexedDB数据库结构创建完成');
+                };
+            });
+        }
+
+        // 通用保存函数
+        function saveToIndexedDB(storeName, data) {
+            return new Promise((resolve) => {
+                if (!dbInstance) {
+                    resolve(false);
+                    return;
+                }
+                try {
+                    const transaction = dbInstance.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put({ id: 'main', data: data });
+
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => {
+                        console.error(`IndexedDB保存${storeName}失败:`, request.error);
+                        resolve(false);
+                    };
+                } catch (e) {
+                    console.error(`IndexedDB保存${storeName}异常:`, e);
+                    resolve(false);
+                }
+            });
+        }
+
+        // 通用读取函数
+        function loadFromIndexedDB(storeName) {
+            return new Promise((resolve) => {
+                if (!dbInstance) {
+                    resolve(null);
+                    return;
+                }
+                try {
+                    const transaction = dbInstance.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get('main');
+
+                    request.onsuccess = () => {
+                        resolve(request.result?.data || null);
+                    };
+                    request.onerror = () => {
+                        console.error(`IndexedDB读取${storeName}失败:`, request.error);
+                        resolve(null);
+                    };
+                } catch (e) {
+                    console.error(`IndexedDB读取${storeName}异常:`, e);
+                    resolve(null);
+                }
+            });
+        }
+
+        // 从 localStorage 迁移数据到 IndexedDB
+        async function migrateFromLocalStorage() {
+            // 迁移 API 模式数据
+            const apiData = localStorage.getItem('miaomiao_chat_v5');
+            if (apiData) {
+                try {
+                    const parsed = JSON.parse(apiData);
+                    const saved = await saveToIndexedDB('appData', parsed);
+                    if (saved) {
+                        localStorage.removeItem('miaomiao_chat_v5');
+                        console.log('API模式数据已从localStorage迁移到IndexedDB');
+                    }
+                } catch (e) {
+                    console.error('迁移API数据失败:', e);
+                }
+            }
+
+            // 迁移微信模式数据
+            const wechatDataStr = localStorage.getItem('miaomiao_wechat_v1');
+            if (wechatDataStr) {
+                try {
+                    const parsed = JSON.parse(wechatDataStr);
+                    const saved = await saveToIndexedDB('wechatData', parsed);
+                    if (saved) {
+                        localStorage.removeItem('miaomiao_wechat_v1');
+                        console.log('微信模式数据已从localStorage迁移到IndexedDB');
+                    }
+                } catch (e) {
+                    console.error('迁移微信数据失败:', e);
+                }
+            }
+        }
+
+        // ==================== 本地存储（使用IndexedDB，降级到localStorage） ====================
         function saveData() {
+            // 优先使用 IndexedDB
+            if (dbInstance) {
+                saveToIndexedDB('appData', appData).then(success => {
+                    if (!success) {
+                        console.warn('IndexedDB保存失败，尝试localStorage');
+                        saveToLocalStorage();
+                    }
+                });
+                return true;
+            }
+            // 降级到 localStorage
+            return saveToLocalStorage();
+        }
+
+        function saveToLocalStorage() {
             try {
                 localStorage.setItem('miaomiao_chat_v5', JSON.stringify(appData));
                 return true;
             } catch (e) {
-                console.error('API模式数据保存失败:', e);
+                console.error('localStorage保存失败:', e);
                 if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
-                    alert('存储空间已满！请清理一些旧对话后再试。\n\n建议：进入设置导出数据备份，然后删除一些不需要的对话。');
-                } else {
-                    alert('数据保存失败: ' + e.message);
+                    console.warn('⚠️ 存储空间已满，新消息可能无法持久保存。');
                 }
                 return false;
             }
         }
 
-        function loadData() {
+        async function loadData() {
+            // 优先从 IndexedDB 加载
+            if (dbInstance) {
+                const saved = await loadFromIndexedDB('appData');
+                if (saved) {
+                    appData = { ...appData, ...saved };
+                    return;
+                }
+            }
+            // 降级到 localStorage
             const saved = localStorage.getItem('miaomiao_chat_v5');
             if (saved) {
                 appData = { ...appData, ...JSON.parse(saved) };
@@ -5102,7 +5258,16 @@
 
         let editingWechatMessageId = null;  // 正在编辑的微信消息ID
 
-        function initWechatData() {
+        async function initWechatData() {
+            // 优先从 IndexedDB 加载
+            if (dbInstance) {
+                const saved = await loadFromIndexedDB('wechatData');
+                if (saved) {
+                    wechatData = { ...wechatData, ...saved };
+                    return;
+                }
+            }
+            // 降级到 localStorage
             const saved = localStorage.getItem('miaomiao_wechat_v1');
             if (saved) {
                 wechatData = { ...wechatData, ...JSON.parse(saved) };
@@ -5110,22 +5275,35 @@
         }
 
         function saveWechatData() {
+            // 优先使用 IndexedDB
+            if (dbInstance) {
+                saveToIndexedDB('wechatData', wechatData).then(success => {
+                    if (!success) {
+                        console.warn('IndexedDB保存失败，尝试localStorage');
+                        saveWechatToLocalStorage();
+                    }
+                });
+                return true;
+            }
+            // 降级到 localStorage
+            return saveWechatToLocalStorage();
+        }
+
+        function saveWechatToLocalStorage() {
             try {
                 localStorage.setItem('miaomiao_wechat_v1', JSON.stringify(wechatData));
                 return true;
             } catch (e) {
-                console.error('微信模式数据保存失败:', e);
+                console.error('微信模式localStorage保存失败:', e);
                 if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
-                    alert('存储空间已满！无法保存新消息。\n\n这个对话消息太多了，请清理一些旧消息或删除这个对话后重新开始。');
-                } else {
-                    alert('数据保存失败: ' + e.message);
+                    console.warn('⚠️ 微信模式存储空间已满，新消息可能无法持久保存。');
                 }
                 return false;
             }
         }
 
-        function openWechatMode() {
-            initWechatData();
+        async function openWechatMode() {
+            await initWechatData();
             renderWechatList();
             openPage('wechatListPage');
         }
