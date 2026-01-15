@@ -3358,7 +3358,18 @@
 
         // ==================== 本地存储 ====================
         function saveData() {
-            localStorage.setItem('miaomiao_chat_v5', JSON.stringify(appData));
+            try {
+                localStorage.setItem('miaomiao_chat_v5', JSON.stringify(appData));
+                return true;
+            } catch (e) {
+                console.error('API模式数据保存失败:', e);
+                if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+                    alert('存储空间已满！请清理一些旧对话后再试。\n\n建议：进入设置导出数据备份，然后删除一些不需要的对话。');
+                } else {
+                    alert('数据保存失败: ' + e.message);
+                }
+                return false;
+            }
         }
 
         function loadData() {
@@ -4519,6 +4530,7 @@
 
         function buildMessages(assistant) {
             const messages = [];
+            const MAX_IMAGES = 5; // 限制最多5张图片，防止请求体过大
 
             // 系统提示词
             let systemContent = assistant.systemPrompt || '';
@@ -4535,9 +4547,41 @@
                 return dataUrl.startsWith('data:image/') && dataUrl.includes('base64,') && dataUrl.length > 100;
             }
 
-            // 清理和验证multimodal内容
-            function sanitizeContent(content) {
-                // 如果是字符串，直接返回（可能是空字符串也接受）
+            // 统计消息中的图片数量
+            function countImages(content) {
+                if (!Array.isArray(content)) return 0;
+                return content.filter(part => part.type === 'image_url' && part.image_url?.url).length;
+            }
+
+            // 历史消息
+            const history = appData.messages[appData.currentConversationId].slice(0, -1);
+            const contextLength = assistant.contextLength || 20;
+            const historySlice = history.slice(-contextLength);
+
+            // 第一遍：统计所有图片，确定哪些消息的图片可以保留
+            let totalImages = 0;
+            const msgImageInfo = historySlice.map((m, idx) => {
+                const content = m.apiContent || m.content;
+                const count = Array.isArray(content) ? countImages(content) : 0;
+                totalImages += count;
+                return { idx, count, hasImages: count > 0 };
+            });
+
+            // 从后往前保留图片，直到达到MAX_IMAGES
+            let remainingQuota = MAX_IMAGES;
+            const allowedImageMsgIndices = new Set();
+            for (let i = msgImageInfo.length - 1; i >= 0 && remainingQuota > 0; i--) {
+                if (msgImageInfo[i].hasImages) {
+                    if (msgImageInfo[i].count <= remainingQuota) {
+                        allowedImageMsgIndices.add(msgImageInfo[i].idx);
+                        remainingQuota -= msgImageInfo[i].count;
+                    }
+                }
+            }
+
+            // 清理和验证multimodal内容（带图片配额控制）
+            function sanitizeContent(content, msgIdx) {
+                // 如果是字符串，直接返回
                 if (typeof content === 'string') {
                     return content || '[空消息]';
                 }
@@ -4545,24 +4589,40 @@
                 if (Array.isArray(content)) {
                     const validParts = [];
                     let hasText = false;
+                    let skippedImages = 0;
+                    const canIncludeImages = allowedImageMsgIndices.has(msgIdx);
+
                     for (const part of content) {
                         try {
                             if (part.type === 'text') {
                                 validParts.push(part);
                                 hasText = true;
                             } else if (part.type === 'image_url' && part.image_url?.url) {
-                                // 验证图片数据
-                                if (isValidImageDataUrl(part.image_url.url)) {
+                                if (canIncludeImages && isValidImageDataUrl(part.image_url.url)) {
                                     validParts.push(part);
+                                } else if (isValidImageDataUrl(part.image_url.url)) {
+                                    // 图片有效但配额不足，跳过
+                                    skippedImages++;
                                 } else {
                                     console.warn('API模式：跳过异常图片数据');
                                 }
                             }
-                            // 跳过其他未知类型
                         } catch (e) {
                             console.warn('API模式：跳过异常内容块', e);
                         }
                     }
+
+                    // 如果跳过了图片，在文本中标记
+                    if (skippedImages > 0) {
+                        const existingText = validParts.find(p => p.type === 'text');
+                        if (existingText) {
+                            existingText.text = `[此消息原有${skippedImages}张图片已省略] ` + existingText.text;
+                        } else {
+                            validParts.push({ type: 'text', text: `[此消息有${skippedImages}张图片已省略]` });
+                            hasText = true;
+                        }
+                    }
+
                     // 如果过滤后没有内容，返回占位文本
                     if (validParts.length === 0) {
                         return '[消息内容已损坏]';
@@ -4585,21 +4645,18 @@
                 }
             }
 
-            // 历史消息
-            const history = appData.messages[appData.currentConversationId].slice(0, -1);
-            const contextLength = assistant.contextLength || 20;
-            for (const m of history.slice(-contextLength)) {
+            // 第二遍：构建消息
+            historySlice.forEach((m, idx) => {
                 try {
-                    // 优先使用apiContent（multimodal格式），否则使用content
                     const rawContent = m.apiContent || m.content;
-                    const msgContent = sanitizeContent(rawContent);
+                    const msgContent = sanitizeContent(rawContent, idx);
                     messages.push({ role: m.role, content: msgContent });
                 } catch (e) {
                     // 单条消息处理出错，添加占位消息
                     console.warn('API模式：跳过异常消息', m?.id, e);
                     messages.push({ role: m.role || 'user', content: '[消息解析失败]' });
                 }
-            }
+            });
 
             return messages;
         }
@@ -4877,25 +4934,14 @@
             renderFilePreview();
         }
 
-        // 构建包含文件的消息内容（Claude API multimodal格式）
+        // 构建包含文件的消息内容（OpenAI兼容multimodal格式）
+        // 注意：text 放前面，image_url 放后面（兼容更多第三方API）
         function buildMultimodalContent(text, files) {
             if (!files || files.length === 0) {
                 return text;
             }
 
             const content = [];
-
-            // 先添加图片（使用OpenAI兼容格式）
-            for (const file of files) {
-                if (file.isImage) {
-                    content.push({
-                        type: 'image_url',
-                        image_url: {
-                            url: file.base64  // data:image/xxx;base64,xxx 完整格式
-                        }
-                    });
-                }
-            }
 
             // 构建文本内容（包含文本文件的实际内容）
             let textParts = [];
@@ -4923,10 +4969,24 @@
             // 如果只有图片没有文本，添加默认提示
             const finalText = textParts.length > 0 ? textParts.join('\n\n') : '请查看图片';
 
+            // 先添加文本（放在前面）
             content.push({
                 type: 'text',
                 text: finalText
             });
+
+            // 再添加图片（放在后面，使用OpenAI兼容格式）
+            for (const file of files) {
+                if (file.isImage) {
+                    content.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: file.base64,  // data:image/xxx;base64,xxx 完整格式
+                            detail: 'auto'     // 一些API需要这个参数
+                        }
+                    });
+                }
+            }
 
             return content;
         }
@@ -5050,7 +5110,18 @@
         }
 
         function saveWechatData() {
-            localStorage.setItem('miaomiao_wechat_v1', JSON.stringify(wechatData));
+            try {
+                localStorage.setItem('miaomiao_wechat_v1', JSON.stringify(wechatData));
+                return true;
+            } catch (e) {
+                console.error('微信模式数据保存失败:', e);
+                if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+                    alert('存储空间已满！无法保存新消息。\n\n这个对话消息太多了，请清理一些旧消息或删除这个对话后重新开始。');
+                } else {
+                    alert('数据保存失败: ' + e.message);
+                }
+                return false;
+            }
         }
 
         function openWechatMode() {
@@ -5413,7 +5484,35 @@
 
             try {
                 // 构建请求
-                const requestMessages = buildWechatRequestMessages(conv, effectiveAssistant);
+                let requestMessages;
+                try {
+                    requestMessages = buildWechatRequestMessages(conv, effectiveAssistant);
+                } catch (buildError) {
+                    console.error('构建请求消息失败:', buildError);
+                    throw new Error('构建消息失败: ' + buildError.message);
+                }
+
+                const requestBody = {
+                    model: effectiveAssistant.modelId,
+                    messages: requestMessages,
+                    temperature: effectiveAssistant.temperature || 0.8
+                };
+
+                // 检查请求体大小
+                let bodyStr;
+                try {
+                    bodyStr = JSON.stringify(requestBody);
+                } catch (jsonError) {
+                    console.error('JSON序列化失败:', jsonError);
+                    throw new Error('消息序列化失败，可能包含无法处理的数据');
+                }
+
+                const bodySizeMB = (bodyStr.length / 1024 / 1024).toFixed(2);
+                console.log(`请求体大小: ${bodySizeMB}MB`);
+
+                if (bodyStr.length > 10 * 1024 * 1024) { // 超过10MB警告
+                    console.warn('请求体过大，可能导致请求失败');
+                }
 
                 const response = await fetch(provider.baseUrl + provider.apiPath, {
                     method: 'POST',
@@ -5421,20 +5520,20 @@
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + provider.apiKey
                     },
-                    body: JSON.stringify({
-                        model: effectiveAssistant.modelId,
-                        messages: requestMessages,
-                        temperature: effectiveAssistant.temperature || 0.8
-                    })
+                    body: bodyStr
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
                 }
 
                 const data = await response.json();
                 const replyContent = data.choices[0].message.content;
-                
+
+                // 调试：打印API原始响应
+                console.log('API原始响应:', replyContent.substring(0, 500));
+
                 // 解析回复（尝试JSON数组，否则当普通文本处理）
                 parseAndAddWechatReplies(replyContent, conv);
 
@@ -5561,12 +5660,8 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
             fullContent += '=====对话记录=====\n';
 
             // 添加历史消息，A风格：每条加说话人前缀
-            const memoryCount = settings.memoryCount || 20;
-            const history = conv.messages.slice(-memoryCount);
+            let memoryCount = settings.memoryCount || 20;
             const assistantName = assistant.name || '助手';
-
-            // 收集图片用于multimodal
-            const images = [];
 
             // 验证图片数据是否有效
             function isValidImageDataUrl(dataUrl) {
@@ -5574,6 +5669,39 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
                 // 检查是否是有效的 data URL 格式
                 return dataUrl.startsWith('data:image/') && dataUrl.includes('base64,') && dataUrl.length > 100;
             }
+
+            // 获取历史消息
+            const history = conv.messages.slice(-memoryCount);
+
+            // 只发送"这一轮"用户新发的图片（最后一条助手消息之后的图片）
+            // 已经被AI看过的历史图片不再重复发送
+            const MAX_IMAGES = 5;
+            const images = [];
+            let totalImageCount = 0; // 记录总图片数
+
+            // 找到最后一条助手消息的索引（在history数组中）
+            let lastAssistantIdx = -1;
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role === 'assistant') {
+                    lastAssistantIdx = i;
+                    break;
+                }
+            }
+
+            // 收集"新图片"：最后一条助手消息之后的用户图片
+            const newImageIndices = [];
+            history.forEach((msg, idx) => {
+                if (msg.type === 'image' && msg.role === 'user' && isValidImageDataUrl(msg.content)) {
+                    // 只有在最后一条助手消息之后的图片才是"新图片"
+                    if (idx > lastAssistantIdx) {
+                        newImageIndices.push(idx);
+                    }
+                }
+            });
+            // 限制最多MAX_IMAGES张
+            const validImageIndices = new Set(newImageIndices.slice(-MAX_IMAGES));
+
+            console.log(`图片收集: 最后助手消息位置=${lastAssistantIdx}, 新图片数=${newImageIndices.length}, 将发送=${validImageIndices.size}张`);
 
             history.forEach((msg, idx) => {
                 try {
@@ -5586,15 +5714,20 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
                         return;
                     }
 
-                    // 图片消息：收集图片，在文本中标记
+                    // 图片消息处理
                     if (msg.type === 'image') {
-                        if (isValidImageDataUrl(content)) {
+                        totalImageCount++;
+                        if (validImageIndices.has(idx) && isValidImageDataUrl(content)) {
+                            // 这是新发的图片，收集用于发送
                             images.push({
-                                dataUrl: content  // 保存完整的 data:image/xxx;base64,xxx 格式
+                                dataUrl: content
                             });
                             fullContent += `${speaker}: [发送了图片${images.length}]\n`;
+                        } else if (isValidImageDataUrl(content)) {
+                            // 这是历史图片（AI已经看过的），只用文字标记
+                            fullContent += `${speaker}: [之前发送过图片，AI已查看]\n`;
                         } else {
-                            // 图片数据异常，只添加文字标记
+                            // 图片数据异常
                             fullContent += `${speaker}: [发送了图片，但图片数据已损坏]\n`;
                             console.warn('微信模式：跳过异常图片数据', msg.id);
                         }
@@ -5620,38 +5753,61 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
                 }
             });
 
+            // 如果图片被裁剪了，在对话开头提示
+            if (totalImageCount > MAX_IMAGES) {
+                const skippedCount = totalImageCount - images.length;
+                fullContent = fullContent.replace('=====对话记录=====\n',
+                    `=====对话记录=====\n[注：历史中共有${totalImageCount}张图片，为节省空间只保留最近${images.length}张，其余${skippedCount}张用文字标记]\n`);
+            }
+
             fullContent += '=====\n';
             fullContent += `请以${assistantName}的身份回复:`;
 
+            // 调试：打印图片收集情况
+            console.log(`图片收集情况: 历史消息${history.length}条, 总图片${totalImageCount}张, 收集到${images.length}张`);
+
             // 如果有图片，构建multimodal格式（OpenAI兼容格式）
+            // 注意：text 放前面，image_url 放后面（兼容更多第三方API）
             if (images.length > 0) {
                 const contentParts = [];
+                const validImages = [];
 
-                // 先添加所有图片（OpenAI兼容格式）
-                images.forEach(img => {
-                    // 再次验证，防止异常数据进入请求
+                // 先验证所有图片
+                images.forEach((img, i) => {
                     if (img.dataUrl && typeof img.dataUrl === 'string') {
-                        contentParts.push({
-                            type: 'image_url',
-                            image_url: {
-                                url: img.dataUrl
-                            }
-                        });
+                        console.log(`图片${i+1}: 数据长度=${img.dataUrl.length}, 前50字符=${img.dataUrl.substring(0, 50)}`);
+                        validImages.push(img);
                     }
                 });
 
-                // 如果过滤后没有有效图片，退回纯文本模式
-                if (contentParts.length === 0) {
+                // 如果没有有效图片，退回纯文本模式
+                if (validImages.length === 0) {
+                    console.warn('所有图片都无效，退回纯文本模式');
                     return [{ role: 'user', content: fullContent }];
                 }
 
-                // 再添加文本
+                // 先添加文本（放在前面）
                 contentParts.push({
                     type: 'text',
                     text: fullContent
                 });
 
+                // 再添加图片（放在后面）
+                validImages.forEach(img => {
+                    contentParts.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: img.dataUrl,
+                            detail: 'auto'  // 一些API需要这个参数
+                        }
+                    });
+                });
+
+                console.log(`最终发送${validImages.length}张图片, 文本长度=${fullContent.length}字符`);
+
                 return [{ role: 'user', content: contentParts }];
+            } else {
+                console.log('没有收集到图片，使用纯文本模式');
             }
 
             // A风格：只发一条user消息
@@ -5660,26 +5816,89 @@ type可以是"text"(文字)或"voice_message"(语音)，你自由选择。
 
         function parseAndAddWechatReplies(content, conv) {
             let replies = [];
-            
+
             // 尝试解析JSON数组
             try {
-                const trimmed = content.trim();
+                let trimmed = content.trim();
+
+                // 处理 ```json ... ``` 代码块格式（上下文长时AI容易这样返回）
+                if (trimmed.includes('```')) {
+                    // 移除 ```json 或 ``` 开头
+                    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '');
+                    // 移除结尾的 ```
+                    trimmed = trimmed.replace(/\s*```\s*$/, '');
+                    trimmed = trimmed.trim();
+                    console.log('检测到代码块格式，已去除标记');
+                }
+
                 // 先试整个文本是不是JSON
                 if (trimmed.startsWith('[')) {
                     replies = JSON.parse(trimmed);
                 } else {
                     // 从文本中找JSON数组（兜底：万一AI在前面加了废话）
-                    const match = trimmed.match(/\[[\s\S]*\]/);
+                    // 使用更精确的匹配：找以[开头、以]结尾的最外层数组
+                    const match = trimmed.match(/\[[\s\S]*?\](?=\s*$|\s*```)/);
                     if (match) {
                         replies = JSON.parse(match[0]);
+                    } else {
+                        // 再试一次更宽松的匹配
+                        const match2 = trimmed.match(/\[[\s\S]*\]/);
+                        if (match2) {
+                            replies = JSON.parse(match2[0]);
+                        }
                     }
                 }
+
+                if (replies.length > 0) {
+                    console.log(`成功解析${replies.length}条回复`);
+                }
             } catch (e) {
-                // JSON解析失败，当普通文本处理
+                // JSON解析失败，尝试容错处理
+                console.warn('JSON标准解析失败:', e.message);
+
+                // 容错方案：逐个提取JSON对象
+                try {
+                    let trimmed = content.trim();
+                    // 去除代码块标记
+                    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
+                    // 尝试修复不完整的JSON（缺少闭合括号）
+                    if (trimmed.startsWith('[') && !trimmed.endsWith(']')) {
+                        // 找到最后一个完整的对象结尾 }
+                        const lastCompleteObj = trimmed.lastIndexOf('}');
+                        if (lastCompleteObj > 0) {
+                            trimmed = trimmed.substring(0, lastCompleteObj + 1) + ']';
+                            console.log('尝试修复不完整的JSON（补全闭合括号）');
+                            replies = JSON.parse(trimmed);
+                        }
+                    }
+
+                    // 如果还是失败，尝试逐个提取对象
+                    if (replies.length === 0) {
+                        // 用正则逐个匹配 {"type":"...", "content":"...", ...} 格式的对象
+                        const objPattern = /\{\s*"type"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"\s*(?:,\s*"emotion"\s*:\s*"([^"]+)")?\s*\}/g;
+                        let match;
+                        while ((match = objPattern.exec(content)) !== null) {
+                            replies.push({
+                                type: match[1],
+                                content: match[2].replace(/\\"/g, '"').replace(/\\n/g, '\n'),
+                                emotion: match[3] || 'neutral'
+                            });
+                        }
+                        if (replies.length > 0) {
+                            console.log(`容错模式：正则提取到${replies.length}条回复`);
+                        }
+                    } else {
+                        console.log(`容错模式：修复后解析到${replies.length}条回复`);
+                    }
+                } catch (e2) {
+                    console.warn('容错解析也失败:', e2.message);
+                }
             }
 
             if (replies.length === 0) {
                 // 不是JSON，当普通文本
+                console.log('未能解析JSON，作为纯文本处理');
                 replies = [{ type: 'text', content: content }];
             }
 
